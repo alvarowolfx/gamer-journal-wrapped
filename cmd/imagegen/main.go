@@ -60,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played console: %v", err)
 	}
-	renderAndSaveMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsoles)
+	renderAndSaveAllMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsoles)
 
 	mostPlayedPlatform := []MostPlayedByPlaytime{}
 	err = db.Select(&mostPlayedPlatform, `
@@ -74,8 +74,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played platform: %v", err)
 	}
-	mostPlayedPlatform = topN(mostPlayedPlatform, 9)
-	renderAndSaveMostPlayedWrapped("Most played platform in "+yearStr, mostPlayedPlatform)
+	renderAndSaveNMostPlayedWrapped("Most played platform in "+yearStr, mostPlayedPlatform, 9)
 
 	mostPlayedGames := []MostPlayedGame{}
 	err = db.Select(&mostPlayedGames, `
@@ -89,8 +88,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
 	}
-	mostPlayedGames = topN(mostPlayedGames, 8)
-	renderAndSaveMostPlayedWrapped("Most played games in "+yearStr, mostPlayedGames)
+	renderAndSaveNMostPlayedWrapped("Most played games in "+yearStr, mostPlayedGames, 8)
 
 	mostPlayedGameSerie := []MostPlayedByPlaytime{}
 	err = db.Select(&mostPlayedGameSerie, `
@@ -104,8 +102,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played game serie: %v", err)
 	}
-	mostPlayedGameSerie = topN(mostPlayedGameSerie, 8)
-	renderAndSaveMostPlayedWrapped("Most played game serie in "+yearStr, mostPlayedGameSerie)
+	renderAndSaveNMostPlayedWrapped("Most played game serie in "+yearStr, mostPlayedGameSerie, 8)
 
 	gamesByStatus := []MostPlayedByNumGames{}
 	err = db.Select(&gamesByStatus, `
@@ -118,7 +115,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
 	}
-	renderAndSaveMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatus)
+	renderAndSaveAllMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatus)
 
 	busiestMonth := []MostPlayedByPlaytime{}
 	err = db.Select(&busiestMonth, `
@@ -138,11 +135,16 @@ func main() {
 		d.NoIcon = true
 		busiestMonthData[i] = d
 	}
-	renderAndSaveMostPlayedWrapped("Busiest months in "+yearStr, busiestMonthData)
+	renderAndSaveAllMostPlayedWrapped("Busiest months in "+yearStr, busiestMonthData)
 }
 
-func renderAndSaveMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T) {
-	imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data)).
+func renderAndSaveNMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T, n int) {
+	imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), n).
+		SavePNG(fmt.Sprintf("%s/%s.png", OutFolder, util.ToSnakecase(title)))
+}
+
+func renderAndSaveAllMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T) {
+	imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), len(data)).
 		SavePNG(fmt.Sprintf("%s/%s.png", OutFolder, util.ToSnakecase(title)))
 }
 
@@ -152,13 +154,6 @@ func toBarChartItems[T imagegen.BarChartItem](arr []T) []imagegen.BarChartItem {
 		narr[i] = d
 	}
 	return narr
-}
-
-func topN[T any](arr []T, n int) []T {
-	if len(arr) < n {
-		return arr
-	}
-	return arr[0:n]
 }
 
 type MostPlayedByPlaytime struct {

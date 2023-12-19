@@ -16,7 +16,7 @@ const (
 	BackgroundColor = "#000000"
 	TitleFontSize   = 48
 	BoldFontSize    = 20
-	RegularFontSize = 14
+	RegularFontSize = 15
 )
 
 var (
@@ -36,23 +36,25 @@ type SaveableDrawing interface {
 	SavePNG(path string) error
 }
 
-func RenderMostPlayedWrapped(title string, data []BarChartItem) SaveableDrawing {
+func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableDrawing {
 	dc := gg.NewContext(W/Ratio, H/Ratio)
 	dc.SetHexColor(BackgroundColor)
 	dc.DrawRectangle(0, 0, W/Ratio, H/Ratio)
 	dc.Fill()
 	margin := 20.0
 	marginTop := float64(H) / 9.5
-	barHeight := (float64(H) / float64(len(data))) / 6
+	barHeight := (float64(H) / float64(n)) / 6
 	if barHeight > 40 {
 		barHeight = 40
 	}
 	maxMetric := -1
+	total := 0
 	for _, d := range data {
 		m := d.GetMetric()
 		if m > maxMetric {
 			maxMetric = m
 		}
+		total += m
 	}
 	maxMetric = int(float64(maxMetric) * 1.25)
 
@@ -65,6 +67,9 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem) SaveableDrawing 
 	dc.Fill()
 
 	for i, d := range data {
+		if i > n-1 {
+			break
+		}
 		fullbarSize := float64(W/Ratio - 4*margin)
 		icon := d.RenderIcon(uint(barHeight*iconRatio) - 4)
 
