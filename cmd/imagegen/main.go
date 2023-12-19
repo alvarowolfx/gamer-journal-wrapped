@@ -49,8 +49,8 @@ func main() {
 
 	fmt.Println("Rendering wrapped for", yearStr)
 
-	mostPlayedConsolesData := []MostPlayedByPlaytime{}
-	err = db.Select(&mostPlayedConsolesData, `
+	mostPlayedConsoles := []MostPlayedByPlaytime{}
+	err = db.Select(&mostPlayedConsoles, `
 	select c.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
 	from playthroughs p
 		inner join consoles c on JSON_CONTAINS(p.console, CONCAT('"', c.record_id, '"'))
@@ -60,10 +60,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played console: %v", err)
 	}
-	renderAndSaveMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsolesData)
+	renderAndSaveMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsoles)
 
-	mostPlayedPlatformData := []MostPlayedByPlaytime{}
-	err = db.Select(&mostPlayedPlatformData, `
+	mostPlayedPlatform := []MostPlayedByPlaytime{}
+	err = db.Select(&mostPlayedPlatform, `
 	select pt.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
 	from playthroughs p	
 		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
@@ -74,10 +74,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played platform: %v", err)
 	}
-	renderAndSaveMostPlayedWrapped("Most played platform in "+yearStr, topN(mostPlayedPlatformData, 9))
+	mostPlayedPlatform = topN(mostPlayedPlatform, 9)
+	renderAndSaveMostPlayedWrapped("Most played platform in "+yearStr, mostPlayedPlatform)
 
-	mostPlayedGamesData := []MostPlayedGame{}
-	err = db.Select(&mostPlayedGamesData, `
+	mostPlayedGames := []MostPlayedGame{}
+	err = db.Select(&mostPlayedGames, `
 	select g.name as title, pt.name as platform, c.name as console, p.playtime/(60*60) as playtime
 	from playthroughs p	
 		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
@@ -88,10 +89,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
 	}
-	renderAndSaveMostPlayedWrapped("Most played games in "+yearStr, topN(mostPlayedGamesData, 8))
+	mostPlayedGames = topN(mostPlayedGames, 8)
+	renderAndSaveMostPlayedWrapped("Most played games in "+yearStr, mostPlayedGames)
 
-	mostPlayedGameSerieData := []MostPlayedByPlaytime{}
-	err = db.Select(&mostPlayedGameSerieData, `
+	mostPlayedGameSerie := []MostPlayedByPlaytime{}
+	err = db.Select(&mostPlayedGameSerie, `
 	select s.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
 	from playthroughs p	
 		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
@@ -102,11 +104,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played game serie: %v", err)
 	}
-	mostPlayedConsolesData = topN(mostPlayedConsolesData, 8)
-	renderAndSaveMostPlayedWrapped("Most played game serie in "+yearStr, mostPlayedGameSerieData)
+	mostPlayedGameSerie = topN(mostPlayedGameSerie, 8)
+	renderAndSaveMostPlayedWrapped("Most played game serie in "+yearStr, mostPlayedGameSerie)
 
-	gamesByStatusData := []MostPlayedByNumGames{}
-	err = db.Select(&gamesByStatusData, `
+	gamesByStatus := []MostPlayedByNumGames{}
+	err = db.Select(&gamesByStatus, `
 	select p.status as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
 	from playthroughs p	
 	where p.year_start_date = ?
@@ -116,10 +118,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
 	}
-	renderAndSaveMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatusData)
+	renderAndSaveMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatus)
 
-	busiestMonthData := []MostPlayedByPlaytime{}
-	err = db.Select(&busiestMonthData, `
+	busiestMonth := []MostPlayedByPlaytime{}
+	err = db.Select(&busiestMonth, `
 	select EXTRACT(MONTH from p.start_date) as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
 		from playthroughs p	
 	where p.year_start_date = ?
@@ -129,14 +131,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query busiest month: %v", err)
 	}
-	busiestMonth := make([]imagegen.BarChartItem, len(busiestMonthData))
-	for i, d := range busiestMonthData {
+	busiestMonthData := make([]imagegen.BarChartItem, len(busiestMonth))
+	for i, d := range busiestMonth {
 		monthNum, _ := strconv.ParseInt(d.Title, 10, 64)
 		d.Title = time.Month(int(monthNum)).String()
 		d.NoIcon = true
-		busiestMonth[i] = d
+		busiestMonthData[i] = d
 	}
-	renderAndSaveMostPlayedWrapped("Busiest months in "+yearStr, busiestMonth)
+	renderAndSaveMostPlayedWrapped("Busiest months in "+yearStr, busiestMonthData)
 }
 
 func renderAndSaveMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T) {
@@ -189,8 +191,7 @@ func (mp MostPlayedByPlaytime) RenderIcon(height uint) image.Image {
 	if icon == nil {
 		return nil
 	}
-	newIcon := imagegen.ResizeImage(height, 0, icon)
-	return newIcon
+	return imagegen.AutoResizeImage(height, icon)
 }
 
 type MostPlayedByNumGames struct {
@@ -239,9 +240,7 @@ func (mpg MostPlayedGame) RenderIcon(height uint) image.Image {
 	if icon == nil {
 		return nil
 	}
-
-	newIcon := imagegen.ResizeAndCropImage(0, height, icon)
-	return newIcon
+	return imagegen.AutoResizeImage(height, icon)
 }
 
 func loadIconForName(name string, isBoxArt bool) image.Image {

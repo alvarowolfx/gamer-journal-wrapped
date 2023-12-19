@@ -31,6 +31,13 @@ func ResizeImage(w, h uint, img image.Image) image.Image {
 	return icon
 }
 
+func AutoResizeImage(h uint, img image.Image) image.Image {
+	if img.Bounds().Max.Y > img.Bounds().Max.X {
+		return ResizeImage(0, h, img)
+	}
+	return ResizeImage(h, 0, img)
+}
+
 func DownloadImageFromUrl(name, folder, url string) (image.Image, error) {
 	response, err := http.Get(url)
 	if err != nil {
