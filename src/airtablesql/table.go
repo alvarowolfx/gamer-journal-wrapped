@@ -23,12 +23,12 @@ type table struct {
 	tableSchema *airtable.TableSchema
 	cache       *expirable.LRU[string, airtable.Records]
 
-	parent *AirtableSQLProvider
+	parent *Provider
 }
 
 var _ sql.Table = &table{}
 
-func NewTable(base *airtable.Base, ts *airtable.TableSchema, provider *AirtableSQLProvider) sql.Table {
+func NewTable(base *airtable.Base, ts *airtable.TableSchema, provider *Provider) sql.Table {
 	schema := tableSchemaFromAirtable(ts)
 	cache := expirable.NewLRU[string, airtable.Records](cachedPages, nil, recordCacheTTL)
 	return &table{

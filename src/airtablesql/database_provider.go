@@ -9,19 +9,19 @@ import (
 	"github.com/mehanizm/airtable"
 )
 
-type AirtableSQLProvider struct {
+type Provider struct {
 	client *airtable.Client
 	bases  []*airtable.Base
 	dbs    []sql.Database
 }
 
-func NewAirtableSQLProvider(client *airtable.Client) (*AirtableSQLProvider, error) {
+func NewProvider(client *airtable.Client) (*Provider, error) {
 	bases, err := client.GetBases().Do()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list airtable bases: %v", err)
 	}
 
-	p := &AirtableSQLProvider{
+	p := &Provider{
 		client: client,
 		bases:  bases.Bases,
 	}
@@ -29,10 +29,10 @@ func NewAirtableSQLProvider(client *airtable.Client) (*AirtableSQLProvider, erro
 	return p, nil
 }
 
-var _ sql.DatabaseProvider = &AirtableSQLProvider{}
+var _ sql.DatabaseProvider = &Provider{}
 
 // Database gets a Database from the provider.
-func (p *AirtableSQLProvider) Database(ctx *sql.Context, name string) (sql.Database, error) {
+func (p *Provider) Database(ctx *sql.Context, name string) (sql.Database, error) {
 	if p.dbs != nil {
 		for _, db := range p.dbs {
 			if name == db.Name() {
@@ -53,7 +53,7 @@ func (p *AirtableSQLProvider) Database(ctx *sql.Context, name string) (sql.Datab
 }
 
 // HasDatabase checks if the Database exists in the provider.
-func (p *AirtableSQLProvider) HasDatabase(ctx *sql.Context, name string) bool {
+func (p *Provider) HasDatabase(ctx *sql.Context, name string) bool {
 	for _, b := range p.bases {
 		if name == util.ToSnakecase(b.Name) {
 			return true
@@ -63,7 +63,7 @@ func (p *AirtableSQLProvider) HasDatabase(ctx *sql.Context, name string) bool {
 }
 
 // AllDatabases returns a slice of all Databases in the provider.
-func (p *AirtableSQLProvider) AllDatabases(ctx *sql.Context) []sql.Database {
+func (p *Provider) AllDatabases(ctx *sql.Context) []sql.Database {
 	if p.dbs != nil {
 		return p.dbs
 	}
@@ -78,7 +78,7 @@ func (p *AirtableSQLProvider) AllDatabases(ctx *sql.Context) []sql.Database {
 	return p.dbs
 }
 
-func (p *AirtableSQLProvider) databaseFromAirtableBase(sctx *sql.Context, client *airtable.Client, base *airtable.Base) (sql.Database, error) {
+func (p *Provider) databaseFromAirtableBase(sctx *sql.Context, client *airtable.Client, base *airtable.Base) (sql.Database, error) {
 	db := memory.NewDatabase(util.ToSnakecase(base.Name))
 	db.EnablePrimaryKeyIndexes()
 

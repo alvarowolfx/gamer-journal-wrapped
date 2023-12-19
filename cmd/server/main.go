@@ -27,7 +27,7 @@ func main() {
 	airtableAPIKey := os.Getenv("AIRTABLE_API_KEY")
 	client := airtable.NewClient(airtableAPIKey)
 
-	provider, err := airtablesql.NewAirtableSQLProvider(client)
+	provider, err := airtablesql.NewProvider(client)
 	if err != nil {
 		log.Fatalf("failed to init airtable sql provider: %v", err)
 	}
