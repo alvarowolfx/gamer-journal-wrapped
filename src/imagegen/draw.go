@@ -1,7 +1,6 @@
 package imagegen
 
 import (
-	"fmt"
 	"image"
 	"log"
 
@@ -33,7 +32,11 @@ type BarChartItem interface {
 	RenderIcon(height uint) image.Image
 }
 
-func RenderMostPlayedWrapped(title string, data []BarChartItem, outFolder string) {
+type SaveableDrawing interface {
+	SavePNG(path string) error
+}
+
+func RenderMostPlayedWrapped(title string, data []BarChartItem) SaveableDrawing {
 	dc := gg.NewContext(W/Ratio, H/Ratio)
 	dc.SetHexColor(BackgroundColor)
 	dc.DrawRectangle(0, 0, W/Ratio, H/Ratio)
@@ -99,7 +102,7 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, outFolder string
 		dc.Fill()
 	}
 
-	dc.SavePNG(fmt.Sprintf("%s/%s.png", outFolder, ToSnakecase(title)))
+	return dc
 }
 
 func LoadFonts() {

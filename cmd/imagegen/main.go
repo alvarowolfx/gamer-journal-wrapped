@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/alvarowolfx/gamer-journal-wrapped/src/imagegen"
+	"github.com/alvarowolfx/gamer-journal-wrapped/src/util"
 	"github.com/joho/godotenv"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -22,6 +23,7 @@ const (
 )
 
 var (
+	mysqlDSN     = "root:@/gaming_journal?parseTime=true"
 	serperAPIKey string
 	year         int
 )
@@ -35,7 +37,7 @@ func main() {
 	serperAPIKey = os.Getenv("SERPER_API_KEY")
 	imagegen.LoadFonts()
 
-	db, err := sqlx.Connect("mysql", "root:@/Gaming Journal?parseTime=true")
+	db, err := sqlx.Connect("mysql", mysqlDSN)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,11 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played console: %v", err)
 	}
-	mostPlayedConsoles := make([]imagegen.BarChartItem, len(mostPlayedConsolesData))
-	for i, d := range mostPlayedConsolesData {
-		mostPlayedConsoles[i] = d
-	}
-	imagegen.RenderMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsoles, OutFolder)
+	renderAndSaveMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsolesData)
 
 	mostPlayedPlatformData := []MostPlayedByPlaytime{}
 	err = db.Select(&mostPlayedPlatformData, `
@@ -76,14 +74,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played platform: %v", err)
 	}
-	mostPlayedPlatform := make([]imagegen.BarChartItem, len(mostPlayedPlatformData))
-	for i, d := range mostPlayedPlatformData {
-		mostPlayedPlatform[i] = d
-	}
-	if len(mostPlayedPlatform) > 9 {
-		mostPlayedPlatform = mostPlayedPlatform[0:9]
-	}
-	imagegen.RenderMostPlayedWrapped("Most played platform in "+yearStr, mostPlayedPlatform, OutFolder)
+	renderAndSaveMostPlayedWrapped("Most played platform in "+yearStr, topN(mostPlayedPlatformData, 9))
 
 	mostPlayedGamesData := []MostPlayedGame{}
 	err = db.Select(&mostPlayedGamesData, `
@@ -97,11 +88,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
 	}
-	mostPlayedGames := make([]imagegen.BarChartItem, len(mostPlayedGamesData))
-	for i, d := range mostPlayedGamesData {
-		mostPlayedGames[i] = d
+	renderAndSaveMostPlayedWrapped("Most played games in "+yearStr, topN(mostPlayedGamesData, 8))
+
+	mostPlayedGameSerieData := []MostPlayedByPlaytime{}
+	err = db.Select(&mostPlayedGameSerieData, `
+	select s.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
+	from playthroughs p	
+		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
+		inner join serie s on JSON_CONTAINS(g.serie, CONCAT('"', s.record_id, '"'))
+	where p.year_start_date = ?
+	group by s.name
+	order by playtime desc;`, yearStr)
+	if err != nil {
+		log.Fatalf("failed to query most played game serie: %v", err)
 	}
-	imagegen.RenderMostPlayedWrapped("Most played games in "+yearStr, mostPlayedGames[:8], OutFolder)
+	mostPlayedConsolesData = topN(mostPlayedConsolesData, 8)
+	renderAndSaveMostPlayedWrapped("Most played game serie in "+yearStr, mostPlayedGameSerieData)
 
 	gamesByStatusData := []MostPlayedByNumGames{}
 	err = db.Select(&gamesByStatusData, `
@@ -114,17 +116,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
 	}
-	gamesByStatus := make([]imagegen.BarChartItem, len(gamesByStatusData))
-	for i, d := range gamesByStatusData {
-		gamesByStatus[i] = d
-	}
-
-	imagegen.RenderMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatus, OutFolder)
+	renderAndSaveMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatusData)
 
 	busiestMonthData := []MostPlayedByPlaytime{}
 	err = db.Select(&busiestMonthData, `
 	select EXTRACT(MONTH from p.start_date) as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
-	from playthroughs p	
+		from playthroughs p	
 	where p.year_start_date = ?
 	group by title
 	order by title asc;
@@ -139,8 +136,27 @@ func main() {
 		d.NoIcon = true
 		busiestMonth[i] = d
 	}
+	renderAndSaveMostPlayedWrapped("Busiest months in "+yearStr, busiestMonth)
+}
 
-	imagegen.RenderMostPlayedWrapped("Busiest months in "+yearStr, busiestMonth, OutFolder)
+func renderAndSaveMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T) {
+	imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data)).
+		SavePNG(fmt.Sprintf("%s/%s.png", OutFolder, util.ToSnakecase(title)))
+}
+
+func toBarChartItems[T imagegen.BarChartItem](arr []T) []imagegen.BarChartItem {
+	narr := make([]imagegen.BarChartItem, len(arr))
+	for i, d := range arr {
+		narr[i] = d
+	}
+	return narr
+}
+
+func topN[T any](arr []T, n int) []T {
+	if len(arr) < n {
+		return arr
+	}
+	return arr[0:n]
 }
 
 type MostPlayedByPlaytime struct {
@@ -151,6 +167,9 @@ type MostPlayedByPlaytime struct {
 }
 
 func (mp MostPlayedByPlaytime) GetTitle() string {
+	if mp.Count == 1 {
+		return fmt.Sprintf("%s (%d game)", mp.Title, mp.Count)
+	}
 	return fmt.Sprintf("%s (%d games)", mp.Title, mp.Count)
 }
 
@@ -227,7 +246,7 @@ func (mpg MostPlayedGame) RenderIcon(height uint) image.Image {
 
 func loadIconForName(name string, isBoxArt bool) image.Image {
 	var icon image.Image
-	iconContent, _ := os.Open(fmt.Sprintf("%s/%s.png", AssetsFolder, imagegen.ToSnakecase(name)))
+	iconContent, _ := os.Open(fmt.Sprintf("%s/%s.png", AssetsFolder, util.ToSnakecase(name)))
 	if iconContent == nil {
 		boxArtURL, err := imagegen.FindBoxArtUrl(name, isBoxArt, serperAPIKey)
 		if err != nil {

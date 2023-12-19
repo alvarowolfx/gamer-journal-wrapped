@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/alvarowolfx/gamer-journal-wrapped/src/util"
 	"github.com/muesli/smartcrop"
 	"github.com/muesli/smartcrop/nfnt"
 	"github.com/nfnt/resize"
@@ -21,9 +22,8 @@ func ResizeAndCropImage(w, h uint, img image.Image) image.Image {
 	type SubImager interface {
 		SubImage(r image.Rectangle) image.Image
 	}
-	resizedImg := img.(SubImager).SubImage(topCrop)
-	icon := resize.Resize(w, h, resizedImg, resize.NearestNeighbor)
-	return icon
+	croppedImg := img.(SubImager).SubImage(topCrop)
+	return ResizeImage(w, h, croppedImg)
 }
 
 func ResizeImage(w, h uint, img image.Image) image.Image {
@@ -43,7 +43,7 @@ func DownloadImageFromUrl(name, folder, url string) (image.Image, error) {
 
 	icon, _, err := image.Decode(iconReader)
 
-	werr := os.WriteFile(fmt.Sprintf("%s/%s.png", folder, ToSnakecase(name)), buf.Bytes(), 0644)
+	werr := os.WriteFile(fmt.Sprintf("%s/%s.png", folder, util.ToSnakecase(name)), buf.Bytes(), 0644)
 	if werr != nil {
 		fmt.Println("failed to save box art:", werr)
 	}
