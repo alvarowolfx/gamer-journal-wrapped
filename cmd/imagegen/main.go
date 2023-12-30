@@ -19,13 +19,13 @@ import (
 
 const (
 	AssetsFolder = "./assets/"
-	OutFolder    = "./out/"
 )
 
 var (
 	mysqlDSN     = "root:@/gaming_journal?parseTime=true"
 	serperAPIKey string
 	year         int
+	outFolder    = "./out/"
 )
 
 func main() {
@@ -43,6 +43,7 @@ func main() {
 	}
 
 	flag.IntVar(&year, "year", 2023, "year to render gamer wrapped")
+	flag.StringVar(&outFolder, "out", "./out/", "output folder")
 	flag.Parse()
 
 	yearStr := fmt.Sprintf("%d", year)
@@ -84,6 +85,7 @@ func main() {
 		inner join consoles c on JSON_CONTAINS(p.console, CONCAT('"', c.record_id, '"'))
 		inner join platforms pt on JSON_CONTAINS(g.platforms, CONCAT('"', pt.record_id, '"'))
 	where p.year_start_date = ?
+		and p.status not in ('Abandoned')
 	order by playtime desc;`, yearStr)
 	if err != nil {
 		log.Fatalf("failed to query most played games: %v", err)
@@ -140,12 +142,12 @@ func main() {
 
 func renderAndSaveNMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T, n int) {
 	imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), n).
-		SavePNG(fmt.Sprintf("%s/%s.png", OutFolder, util.ToSnakecase(title)))
+		SavePNG(fmt.Sprintf("%s/%s.png", outFolder, util.ToSnakecase(title)))
 }
 
 func renderAndSaveAllMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T) {
 	imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), len(data)).
-		SavePNG(fmt.Sprintf("%s/%s.png", OutFolder, util.ToSnakecase(title)))
+		SavePNG(fmt.Sprintf("%s/%s.png", outFolder, util.ToSnakecase(title)))
 }
 
 func toBarChartItems[T imagegen.BarChartItem](arr []T) []imagegen.BarChartItem {

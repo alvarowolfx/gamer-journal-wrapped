@@ -9,14 +9,17 @@ import (
 )
 
 const (
-	W               = 1080
-	H               = 1920
-	Ratio           = 2
-	BarColor        = "#B4F8C8"
-	BackgroundColor = "#000000"
+	W     = 1080
+	H     = 1920
+	Ratio = 2
+	//BarColor        = "#B4F8C8"
+	//BackgroundColor = "#000000"
+	IconColor       = "#FFF"
+	BarColor        = "#FCA311"
+	BackgroundColor = "#14213D"
 	TitleFontSize   = 48
 	BoldFontSize    = 20
-	RegularFontSize = 15
+	RegularFontSize = 14
 )
 
 var (
@@ -86,7 +89,7 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableD
 		}
 
 		if icon != nil {
-			dc.SetHexColor("#FFF")
+			dc.SetHexColor(IconColor)
 			dc.DrawRectangle(x, y, barHeight*iconRatio, barHeight*iconRatio)
 			dc.Fill()
 
