@@ -22,6 +22,24 @@ const (
 	RegularFontSize = 14 * Ratio
 )
 
+type Orientation int
+
+const (
+	Horizontal Orientation = 0
+	Vertical   Orientation = iota
+)
+
+func (o Orientation) String() string {
+	switch o {
+	case Horizontal:
+		return "horizontal"
+	case Vertical:
+		return "vertical"
+	default:
+		return "unknown"
+	}
+}
+
 var (
 	titleFont   font.Face
 	boldFont    font.Face
@@ -39,17 +57,29 @@ type SaveableDrawing interface {
 	SavePNG(path string) error
 }
 
-func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableDrawing {
-	dc := gg.NewContext(W, H)
+func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientation Orientation) SaveableDrawing {
+	width := W
+	height := H
+	if orientation != Vertical {
+		width, height = height, width
+	}
+	dc := gg.NewContext(width, height)
 	dc.SetHexColor(BackgroundColor)
-	dc.DrawRectangle(0, 0, W, H)
+	dc.DrawRectangle(0, 0, float64(width), float64(height))
 	dc.Fill()
 	margin := 20.0 * Ratio
 	if n > 10 {
 		margin = 18.0 * Ratio
 	}
-	marginTop := float64(H) / 5
-	barHeight := Ratio * ((float64(H) / float64(n)) / 3)
+	marginTop := 4 * margin
+	if orientation != Vertical {
+		marginTop = 1.5 * margin
+	}
+	// ((2 * barHeight) + (margin)) * n = 4*height/5
+	// ((2 * barHeight) + (margin)) = 4*height/5n
+	// (2 * barHeight) = (4*height/5n) - (margin)
+	// barHeight = ((4*height/5n) - (margin)) / 2
+	barHeight := ((float64(3*height/4) - float64(margin)) / float64(n)) / 2
 	if barHeight > 40*Ratio {
 		barHeight = 40 * Ratio
 	}
@@ -64,30 +94,39 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableD
 	}
 	maxMetric = int(float64(maxMetric) * 1.25)
 
-	textSize := float64(W - 8*margin)
+	textSize := float64(width) - 8*margin
+	if orientation != Vertical {
+		textSize = float64(width) - 2*margin
+	}
 
 	dc.SetHexColor(BarColor)
 	dc.SetFontFace(titleFont)
-	dc.DrawStringWrapped(title, W/2, 5*margin, 0.5, 0.5, textSize, 1, gg.AlignCenter)
+	dc.DrawStringWrapped(title, float64(width)/2, marginTop, 0.5, 0.5, textSize, 1, gg.AlignCenter)
 	dc.Fill()
+
+	if orientation == Vertical {
+		marginTop += 5 * margin
+	} else {
+		marginTop += 2.5 * margin
+	}
 
 	for i, d := range data {
 		if i > n-1 {
 			break
 		}
-		fullbarSize := float64(W - 4*margin)
+		fullbarSize := float64(width) - 4*margin
 		icon := d.RenderIcon(uint(barHeight*2) - 4)
 
 		if icon != nil {
-			fullbarSize = float64(W - 6*margin)
+			fullbarSize = float64(width) - 6*margin
 		}
 
 		size := (float64(d.GetMetric()) / float64(maxMetric)) * fullbarSize
 		x := float64(1.5 * margin)
-		y := marginTop + (float64(i) * (barHeight + 2.5*margin))
+		y := marginTop + (float64(i) * ((barHeight * 2) + margin/2))
 
 		if icon == nil {
-			y = marginTop + (float64(i) * (barHeight + 2*margin))
+			y = marginTop + (float64(i) * ((barHeight * 2) + margin/2))
 		}
 
 		if icon != nil {
