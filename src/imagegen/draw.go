@@ -9,17 +9,17 @@ import (
 )
 
 const (
-	W     = 1080
-	H     = 1920
 	Ratio = 2
+	W     = 540 * Ratio
+	H     = 960 * Ratio
 	//BarColor        = "#B4F8C8"
 	//BackgroundColor = "#000000"
 	IconColor       = "#FFF"
 	BarColor        = "#FCA311"
 	BackgroundColor = "#14213D"
-	TitleFontSize   = 48
-	BoldFontSize    = 20
-	RegularFontSize = 14
+	TitleFontSize   = 48 * Ratio
+	BoldFontSize    = 20 * Ratio
+	RegularFontSize = 14 * Ratio
 )
 
 var (
@@ -40,15 +40,18 @@ type SaveableDrawing interface {
 }
 
 func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableDrawing {
-	dc := gg.NewContext(W/Ratio, H/Ratio)
+	dc := gg.NewContext(W, H)
 	dc.SetHexColor(BackgroundColor)
-	dc.DrawRectangle(0, 0, W/Ratio, H/Ratio)
+	dc.DrawRectangle(0, 0, W, H)
 	dc.Fill()
-	margin := 20.0
-	marginTop := float64(H) / 9.5
-	barHeight := (float64(H) / float64(n)) / 6
-	if barHeight > 40 {
-		barHeight = 40
+	margin := 20.0 * Ratio
+	if n > 10 {
+		margin = 18.0 * Ratio
+	}
+	marginTop := float64(H) / 5
+	barHeight := Ratio * ((float64(H) / float64(n)) / 3)
+	if barHeight > 40*Ratio {
+		barHeight = 40 * Ratio
 	}
 	maxMetric := -1
 	total := 0
@@ -61,23 +64,22 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableD
 	}
 	maxMetric = int(float64(maxMetric) * 1.25)
 
-	iconRatio := 2.0
-	textSize := float64(W/Ratio - 8*margin)
+	textSize := float64(W - 8*margin)
 
 	dc.SetHexColor(BarColor)
 	dc.SetFontFace(titleFont)
-	dc.DrawStringWrapped(title, (W/Ratio)/2, 5*margin, 0.5, 0.5, textSize, 1, gg.AlignCenter)
+	dc.DrawStringWrapped(title, W/2, 5*margin, 0.5, 0.5, textSize, 1, gg.AlignCenter)
 	dc.Fill()
 
 	for i, d := range data {
 		if i > n-1 {
 			break
 		}
-		fullbarSize := float64(W/Ratio - 4*margin)
-		icon := d.RenderIcon(uint(barHeight*iconRatio) - 4)
+		fullbarSize := float64(W - 4*margin)
+		icon := d.RenderIcon(uint(barHeight*2) - 4)
 
 		if icon != nil {
-			fullbarSize = float64(W/Ratio - 6*margin)
+			fullbarSize = float64(W - 6*margin)
 		}
 
 		size := (float64(d.GetMetric()) / float64(maxMetric)) * fullbarSize
@@ -90,12 +92,12 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int) SaveableD
 
 		if icon != nil {
 			dc.SetHexColor(IconColor)
-			dc.DrawRectangle(x, y, barHeight*iconRatio, barHeight*iconRatio)
+			dc.DrawRectangle(x, y, barHeight*2, barHeight*2)
 			dc.Fill()
 
-			dc.DrawImageAnchored(icon, int(x+(barHeight*(iconRatio/2))), int(y+barHeight), 0.5, 0.5)
+			dc.DrawImageAnchored(icon, int(x+barHeight), int(y+barHeight), 0.5, 0.5)
 
-			x += 8 + barHeight*iconRatio
+			x += 8 + barHeight*2
 		}
 
 		dc.SetHexColor(BarColor)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -42,7 +43,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	flag.IntVar(&year, "year", 2023, "year to render gamer wrapped")
+	flag.IntVar(&year, "year", 2024, "year to render gamer wrapped")
 	flag.StringVar(&outFolder, "out", "./out/", "output folder")
 	flag.Parse()
 
@@ -160,7 +161,7 @@ func toBarChartItems[T imagegen.BarChartItem](arr []T) []imagegen.BarChartItem {
 
 type MostPlayedByPlaytime struct {
 	Title    string
-	Playtime int
+	Playtime float64
 	Count    int
 	NoIcon   bool
 }
@@ -173,19 +174,20 @@ func (mp MostPlayedByPlaytime) GetTitle() string {
 }
 
 func (mp MostPlayedByPlaytime) GetMetric() int {
-	return mp.Playtime
+	return int(math.Round(mp.Playtime))
 }
 
 func (mp MostPlayedByPlaytime) RenderMetric() string {
-	return fmt.Sprintf("%dh", mp.Playtime)
+	return fmt.Sprintf("%dh", mp.GetMetric())
 }
 
 func (mp MostPlayedByPlaytime) RenderIcon(height uint) image.Image {
 	if mp.NoIcon {
 		return nil
 	}
-	icon := loadIconForName(mp.Title, false)
-	if icon == nil {
+	icon, err := loadIconForName(mp.Title, false)
+	if err != nil {
+		fmt.Println("failed to load icon for game: ", mp.Title)
 		return nil
 	}
 	return imagegen.AutoResizeImage(height, icon)
@@ -193,7 +195,7 @@ func (mp MostPlayedByPlaytime) RenderIcon(height uint) image.Image {
 
 type MostPlayedByNumGames struct {
 	Title    string
-	Playtime int
+	Playtime float64
 	Count    int
 }
 
@@ -217,7 +219,7 @@ type MostPlayedGame struct {
 	Title    string
 	Platform string
 	Console  string
-	Playtime int
+	Playtime float64
 }
 
 func (mpg MostPlayedGame) GetTitle() string {
@@ -225,38 +227,39 @@ func (mpg MostPlayedGame) GetTitle() string {
 }
 
 func (mpg MostPlayedGame) GetMetric() int {
-	return mpg.Playtime
+	return int(math.Round(mpg.Playtime))
 }
 
 func (mpg MostPlayedGame) RenderMetric() string {
-	return fmt.Sprintf("%dh", mpg.Playtime)
+	return fmt.Sprintf("%dh", mpg.GetMetric())
 }
 
 func (mpg MostPlayedGame) RenderIcon(height uint) image.Image {
-	icon := loadIconForName(mpg.Title, true)
-	if icon == nil {
+	icon, err := loadIconForName(mpg.Title, true)
+	if err != nil {
+		fmt.Println("failed to load icon for game: ", mpg.Title)
 		return nil
 	}
 	return imagegen.AutoResizeImage(height, icon)
 }
 
-func loadIconForName(name string, isBoxArt bool) image.Image {
+func loadIconForName(name string, isBoxArt bool) (image.Image, error) {
 	var icon image.Image
 	iconContent, _ := os.Open(fmt.Sprintf("%s/%s.png", AssetsFolder, util.ToSnakecase(name)))
 	if iconContent == nil {
 		boxArtURL, err := imagegen.FindBoxArtUrl(name, isBoxArt, serperAPIKey)
 		if err != nil {
 			fmt.Println("failed to find image for game: ", name)
-			return nil
+			return nil, err
 		}
 
 		icon, err := imagegen.DownloadImageFromUrl(name, AssetsFolder, boxArtURL)
 		if err != nil {
 			fmt.Println("failed to download image for game: ", name)
-			return nil
+			return nil, err
 		}
-		return icon
+		return icon, nil
 	}
-	icon, _, _ = image.Decode(iconContent)
-	return icon
+	icon, _, err := image.Decode(iconContent)
+	return icon, err
 }

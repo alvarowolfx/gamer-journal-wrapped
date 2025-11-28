@@ -50,6 +50,9 @@ func FindBoxArtUrl(title string, isBoxArt bool, serperAPIKey string) (string, er
 		return "", err
 	}
 	for _, img := range serperImagesResponse.Images {
+		if strings.Contains(img.ImageURL, "wikia") || strings.Contains(img.ImageURL, "wikimedia") {
+			continue
+		}
 		return img.ImageURL, nil
 	}
 	return "", fmt.Errorf("image not found for search: %s", title)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"image"
 	"io"
-	"log"
 	"net/http"
 	"os"
 
@@ -39,9 +38,12 @@ func AutoResizeImage(h uint, img image.Image) image.Image {
 }
 
 func DownloadImageFromUrl(name, folder, url string) (image.Image, error) {
+	fmt.Println("Downloading image for game:", name)
+	fmt.Println("from url:", url)
 	response, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("failed to download image:", err)
+		return nil, err
 	}
 	defer response.Body.Close()
 
@@ -49,11 +51,15 @@ func DownloadImageFromUrl(name, folder, url string) (image.Image, error) {
 	iconReader := io.TeeReader(response.Body, buf)
 
 	icon, _, err := image.Decode(iconReader)
+	if err != nil {
+		fmt.Println("failed to decode image:", err)
+		return nil, err
+	}
 
 	werr := os.WriteFile(fmt.Sprintf("%s/%s.png", folder, util.ToSnakecase(name)), buf.Bytes(), 0644)
 	if werr != nil {
 		fmt.Println("failed to save box art:", werr)
 	}
 
-	return icon, err
+	return icon, werr
 }
