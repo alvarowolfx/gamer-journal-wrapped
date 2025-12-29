@@ -46,9 +46,17 @@ const (
 		order by count desc;`
 
 	QueryBusiestMonths = `
-		select EXTRACT(MONTH from p.start_date) as title, ROUND(sum(p.playtime)/(60*60), 0) as playtime, count(*) as count
-			from playthroughs p	
-		where p.year_start_date = ?
-		group by title
-		order by title asc;`
+		WITH RECURSIVE months AS (
+			SELECT 1 AS m
+			UNION ALL
+			SELECT m + 1 FROM months WHERE m < 12
+		)
+		select 
+			months.m as title, 
+			COALESCE(ROUND(sum(p.playtime)/(60*60), 0), 0) as playtime, 
+			COUNT(p.record_id) as count
+		from months
+		left join playthroughs p on EXTRACT(MONTH from p.start_date) = months.m and p.year_start_date = ?
+		group by months.m
+		order by months.m asc;`
 )

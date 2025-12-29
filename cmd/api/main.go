@@ -18,6 +18,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/mehanizm/airtable"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -98,34 +99,34 @@ func handleGetStats(c echo.Context) error {
 
 	stats := StatsResponse{Year: year}
 
-	err := db.Select(&stats.MostPlayedConsoles, imagegen.QueryMostPlayedConsoles, yearStr)
-	if err != nil {
-		return err
-	}
+	var g errgroup.Group
 
-	err = db.Select(&stats.MostPlayedPlatform, imagegen.QueryMostPlayedPlatforms, yearStr)
-	if err != nil {
-		return err
-	}
+	g.Go(func() error {
+		return db.Select(&stats.MostPlayedConsoles, imagegen.QueryMostPlayedConsoles, yearStr)
+	})
 
-	err = db.Select(&stats.MostPlayedGames, imagegen.QueryMostPlayedGames, yearStr)
-	if err != nil {
-		return err
-	}
+	g.Go(func() error {
+		return db.Select(&stats.MostPlayedPlatform, imagegen.QueryMostPlayedPlatforms, yearStr)
+	})
 
-	err = db.Select(&stats.MostPlayedSeries, imagegen.QueryMostPlayedSeries, yearStr)
-	if err != nil {
-		return err
-	}
+	g.Go(func() error {
+		return db.Select(&stats.MostPlayedGames, imagegen.QueryMostPlayedGames, yearStr)
+	})
 
-	err = db.Select(&stats.GamesByStatus, imagegen.QueryGamesByStatus, yearStr)
-	if err != nil {
-		return err
-	}
+	g.Go(func() error {
+		return db.Select(&stats.MostPlayedSeries, imagegen.QueryMostPlayedSeries, yearStr)
+	})
 
-	busiestMonth := []imagegen.MostPlayedByPlaytime{}
-	err = db.Select(&busiestMonth, imagegen.QueryBusiestMonths, yearStr)
-	if err != nil {
+	g.Go(func() error {
+		return db.Select(&stats.GamesByStatus, imagegen.QueryGamesByStatus, yearStr)
+	})
+
+	var busiestMonth []imagegen.MostPlayedByPlaytime
+	g.Go(func() error {
+		return db.Select(&busiestMonth, imagegen.QueryBusiestMonths, yearStr)
+	})
+
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
