@@ -3,9 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image"
 	"log"
-	"math"
 	"os"
 	"strconv"
 	"time"
@@ -53,83 +51,43 @@ func main() {
 		yearStr := fmt.Sprintf("%d", year)
 		fmt.Println("Rendering wrapped for", yearStr)
 
-		mostPlayedConsoles := []MostPlayedByPlaytime{}
-		err = db.Select(&mostPlayedConsoles, `
-	select c.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
-	from playthroughs p
-		inner join consoles c on JSON_CONTAINS(p.console, CONCAT('"', c.record_id, '"'))
-	where p.year_start_date = ?
-	group by c.name
-	order by playtime desc`, yearStr)
+		mostPlayedConsoles := []imagegen.MostPlayedByPlaytime{}
+		err = db.Select(&mostPlayedConsoles, imagegen.QueryMostPlayedConsoles, yearStr)
 		if err != nil {
 			log.Fatalf("failed to query most played console: %v", err)
 		}
 		renderAndSaveAllMostPlayedWrapped("Most played consoles in "+yearStr, mostPlayedConsoles)
 
-		mostPlayedPlatform := []MostPlayedByPlaytime{}
-		err = db.Select(&mostPlayedPlatform, `
-	select pt.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
-	from playthroughs p	
-		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
-		inner join platforms pt on JSON_CONTAINS(g.platforms, CONCAT('"', pt.record_id, '"'))
-	where p.year_start_date = ? 
-	group by pt.name
-	order by playtime desc;`, yearStr)
+		mostPlayedPlatform := []imagegen.MostPlayedByPlaytime{}
+		err = db.Select(&mostPlayedPlatform, imagegen.QueryMostPlayedPlatforms, yearStr)
 		if err != nil {
 			log.Fatalf("failed to query most played platform: %v", err)
 		}
 		renderAndSaveNMostPlayedWrapped("Most played platform in "+yearStr, mostPlayedPlatform, 9)
 
-		mostPlayedGames := []MostPlayedGame{}
-		err = db.Select(&mostPlayedGames, `
-	select g.name as title, pt.name as platform, c.name as console, p.playtime/(60*60) as playtime
-	from playthroughs p	
-		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
-		inner join consoles c on JSON_CONTAINS(p.console, CONCAT('"', c.record_id, '"'))
-		inner join platforms pt on JSON_CONTAINS(g.platforms, CONCAT('"', pt.record_id, '"'))
-	where p.year_start_date = ?
-		and p.status not in ('Abandoned')
-	order by playtime desc;`, yearStr)
+		mostPlayedGames := []imagegen.MostPlayedGame{}
+		err = db.Select(&mostPlayedGames, imagegen.QueryMostPlayedGames, yearStr)
 		if err != nil {
 			log.Fatalf("failed to query most played games: %v", err)
 		}
 		renderAndSaveNMostPlayedWrapped("Most played games in "+yearStr, mostPlayedGames, 8)
 
-		mostPlayedGameSerie := []MostPlayedByPlaytime{}
-		err = db.Select(&mostPlayedGameSerie, `
-	select s.name as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
-	from playthroughs p	
-		inner join games g on JSON_CONTAINS(p.games, CONCAT('"', g.record_id, '"'))
-		inner join serie s on JSON_CONTAINS(g.serie, CONCAT('"', s.record_id, '"'))
-	where p.year_start_date = ?
-	group by s.name
-	order by playtime desc;`, yearStr)
+		mostPlayedGameSerie := []imagegen.MostPlayedByPlaytime{}
+		err = db.Select(&mostPlayedGameSerie, imagegen.QueryMostPlayedSeries, yearStr)
 		if err != nil {
 			log.Fatalf("failed to query most played game serie: %v", err)
 		}
 		renderAndSaveNMostPlayedWrapped("Most played game serie in "+yearStr, mostPlayedGameSerie, 8)
 
-		gamesByStatus := []MostPlayedByNumGames{}
-		err = db.Select(&gamesByStatus, `
-	select p.status as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
-	from playthroughs p	
-	where p.year_start_date = ?
-		and p.status not in ('Playing')
-	group by p.status
-	order by count desc;`, yearStr)
+		gamesByStatus := []imagegen.MostPlayedByNumGames{}
+		err = db.Select(&gamesByStatus, imagegen.QueryGamesByStatus, yearStr)
 		if err != nil {
 			log.Fatalf("failed to query most played games: %v", err)
 		}
 		renderAndSaveAllMostPlayedWrapped("Games beaten in "+yearStr, gamesByStatus)
 
-		busiestMonth := []MostPlayedByPlaytime{}
-		err = db.Select(&busiestMonth, `
-	select EXTRACT(MONTH from p.start_date) as title, sum(p.playtime)/(60*60) as playtime, count(*) as count
-		from playthroughs p	
-	where p.year_start_date = ?
-	group by title
-	order by title asc;
-	`, yearStr)
+		busiestMonth := []imagegen.MostPlayedByPlaytime{}
+		err = db.Select(&busiestMonth, imagegen.QueryBusiestMonths, yearStr)
 		if err != nil {
 			log.Fatalf("failed to query busiest month: %v", err)
 		}
@@ -164,109 +122,4 @@ func toBarChartItems[T imagegen.BarChartItem](arr []T) []imagegen.BarChartItem {
 		narr[i] = d
 	}
 	return narr
-}
-
-type MostPlayedByPlaytime struct {
-	Title    string
-	Playtime float64
-	Count    int
-	NoIcon   bool
-}
-
-func (mp MostPlayedByPlaytime) GetTitle() string {
-	if mp.Count == 1 {
-		return fmt.Sprintf("%s (%d game)", mp.Title, mp.Count)
-	}
-	return fmt.Sprintf("%s (%d games)", mp.Title, mp.Count)
-}
-
-func (mp MostPlayedByPlaytime) GetMetric() int {
-	return int(math.Round(mp.Playtime))
-}
-
-func (mp MostPlayedByPlaytime) RenderMetric() string {
-	return fmt.Sprintf("%dh", mp.GetMetric())
-}
-
-func (mp MostPlayedByPlaytime) RenderIcon(height uint) image.Image {
-	if mp.NoIcon {
-		return nil
-	}
-	icon, err := loadIconForName(mp.Title, false)
-	if err != nil {
-		fmt.Println("failed to load icon for game: ", mp.Title)
-		return nil
-	}
-	return imagegen.AutoResizeImage(height, icon)
-}
-
-type MostPlayedByNumGames struct {
-	Title    string
-	Playtime float64
-	Count    int
-}
-
-func (mp MostPlayedByNumGames) GetTitle() string {
-	return mp.Title
-}
-
-func (mp MostPlayedByNumGames) GetMetric() int {
-	return mp.Count
-}
-
-func (mp MostPlayedByNumGames) RenderMetric() string {
-	return fmt.Sprintf("%d", mp.Count)
-}
-
-func (mp MostPlayedByNumGames) RenderIcon(height uint) image.Image {
-	return nil
-}
-
-type MostPlayedGame struct {
-	Title    string
-	Platform string
-	Console  string
-	Playtime float64
-}
-
-func (mpg MostPlayedGame) GetTitle() string {
-	return fmt.Sprintf("%s (%s) on %s", mpg.Title, mpg.Platform, mpg.Console)
-}
-
-func (mpg MostPlayedGame) GetMetric() int {
-	return int(math.Round(mpg.Playtime))
-}
-
-func (mpg MostPlayedGame) RenderMetric() string {
-	return fmt.Sprintf("%dh", mpg.GetMetric())
-}
-
-func (mpg MostPlayedGame) RenderIcon(height uint) image.Image {
-	icon, err := loadIconForName(mpg.Title, true)
-	if err != nil {
-		fmt.Println("failed to load icon for game: ", mpg.Title)
-		return nil
-	}
-	return imagegen.AutoResizeImage(height, icon)
-}
-
-func loadIconForName(name string, isBoxArt bool) (image.Image, error) {
-	var icon image.Image
-	iconContent, _ := os.Open(fmt.Sprintf("%s/%s.png", AssetsFolder, util.ToSnakecase(name)))
-	if iconContent == nil {
-		boxArtURL, err := imagegen.FindBoxArtUrl(name, isBoxArt, serperAPIKey)
-		if err != nil {
-			fmt.Println("failed to find image for game: ", name)
-			return nil, err
-		}
-
-		icon, err := imagegen.DownloadImageFromUrl(name, AssetsFolder, boxArtURL)
-		if err != nil {
-			fmt.Println("failed to download image for game: ", name)
-			return nil, err
-		}
-		return icon, nil
-	}
-	icon, _, err := image.Decode(iconContent)
-	return icon, err
 }

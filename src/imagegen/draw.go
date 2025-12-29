@@ -4,6 +4,8 @@ import (
 	"image"
 	"log"
 
+	"io"
+
 	"github.com/fogleman/gg"
 	"golang.org/x/image/font"
 )
@@ -55,6 +57,15 @@ type BarChartItem interface {
 
 type SaveableDrawing interface {
 	SavePNG(path string) error
+	EncodePNG(w io.Writer) error
+}
+
+type drawing struct {
+	*gg.Context
+}
+
+func (d *drawing) EncodePNG(w io.Writer) error {
+	return d.Context.EncodePNG(w)
 }
 
 func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientation Orientation) SaveableDrawing {
@@ -75,10 +86,10 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientati
 	if orientation != Vertical {
 		marginTop = 1.5 * margin
 	}
-	// ((2 * barHeight) + (margin)) * n = 4*height/5
-	// ((2 * barHeight) + (margin)) = 4*height/5n
-	// (2 * barHeight) = (4*height/5n) - (margin)
-	// barHeight = ((4*height/5n) - (margin)) / 2
+	// ((2 * barHeight) + (margin)) * n = 3*height/4
+	// ((2 * barHeight) + (margin)) = 3*height/4n
+	// (2 * barHeight) = (3*height/4n) - (margin)
+	// barHeight = ((3*height/4n) - (margin)) / 2
 	barHeight := ((float64(3*height/4) - float64(margin)) / float64(n)) / 2
 	if barHeight > 40*Ratio {
 		barHeight = 40 * Ratio
@@ -151,7 +162,7 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientati
 		dc.Fill()
 	}
 
-	return dc
+	return &drawing{dc}
 }
 
 func LoadFonts() {
