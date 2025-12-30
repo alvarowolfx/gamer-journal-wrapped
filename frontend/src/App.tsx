@@ -4,11 +4,11 @@ import {
   Download,
   Eye,
   Gamepad2,
+  Heart,
   Image as ImageIcon,
   Layers,
   Loader2,
   Monitor,
-  Share2,
   Sparkles,
   Trophy
 } from 'lucide-react'
@@ -132,7 +132,9 @@ function App() {
   const [viewMode, setViewMode] = useState<'interactive' | 'export'>('interactive')
   const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical')
 
-  const years = [2021, 2022, 2023, 2024, 2025]
+  const fromYear = 2021;
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - fromYear + 1 }, (_, i) => fromYear + i)
 
   useEffect(() => {
     const fetchBase = async () => {
@@ -337,14 +339,18 @@ function App() {
           )}
         </AnimatePresence>
       </main>
-
-      <footer className="no-screenshot">
+      <footer className="footer">
         <p>
-          <Share2 size={16} /> 
           {viewMode === 'interactive' ? 
-            "Explore and compare your gaming years with interactive charts." : 
+            "Explore and compare my gaming years with interactive charts." : 
             "Snapshot-ready view. Use high-fidelity images for sharing!"
           }
+        </p>
+        <p>
+          Made with <Heart className="heart-icon" /> by{' '}
+          <a href="https://aviebrantz.com" target="_blank" rel="noopener noreferrer">
+            aviebrantz.com
+          </a>
         </p>
       </footer>
     </div>

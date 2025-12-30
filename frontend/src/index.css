@@ -104,6 +104,45 @@ h1 span {
   font-weight: 700;
 }
 
+.footer {
+  margin-top: 4rem;
+  padding: 2rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-family: 'Space Mono', monospace;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.footer a:hover {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.heart-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  color: #ef4444;
+  vertical-align: middle;
+  margin: 0 0.2rem;
+  animation: heart-pulse 1.5s ease infinite;
+}
+
+@keyframes heart-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 .card-tags {
   margin-left: auto;
   display: flex;

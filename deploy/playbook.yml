@@ -29,10 +29,10 @@
       shell: |
         cd ..
         rm -rf {{ build_dir }}
-        mkdir -p {{ build_dir }}/frontend
+        mkdir -p {{ build_dir }}/frontend/dist
         mv {{ app_name }} {{ build_dir }}/{{app_name}}
         cp -r fonts/ {{ build_dir }}/fonts
-        cp -r frontend/dist/* {{ build_dir }}/frontend/
+        cp -r frontend/dist/* {{ build_dir }}/frontend/dist/
         tar -czf {{ app_name }}.tar.gz -C {{ build_dir }} .
       args:
         executable: /bin/bash
