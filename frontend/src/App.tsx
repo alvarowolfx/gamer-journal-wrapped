@@ -123,7 +123,7 @@ const StatChart = ({ title, icon, data, dataKey, color, year, isMonths, isStatus
 };
 
 function App() {
-  const [year, setYear] = useState(2024)
+  const [year, setYear] = useState(2025)
   const [compareYear, setCompareYear] = useState<number | null>(null)
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [compareStats, setCompareStats] = useState<StatsResponse | null>(null)
