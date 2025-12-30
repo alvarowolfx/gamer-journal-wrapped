@@ -2,6 +2,7 @@ package airtablesql
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alvarowolfx/gamer-journal-wrapped/src/util"
 	"github.com/dolthub/go-mysql-server/memory"
@@ -10,20 +11,22 @@ import (
 )
 
 type Provider struct {
-	client *airtable.Client
-	bases  []*airtable.Base
-	dbs    []sql.Database
+	client         *airtable.Client
+	bases          []*airtable.Base
+	dbs            []sql.Database
+	recordCacheTTL time.Duration
 }
 
-func NewProvider(client *airtable.Client) (*Provider, error) {
+func NewProvider(client *airtable.Client, recordCacheTTL time.Duration) (*Provider, error) {
 	bases, err := client.GetBases().Do()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list airtable bases: %v", err)
 	}
 
 	p := &Provider{
-		client: client,
-		bases:  bases.Bases,
+		client:         client,
+		bases:          bases.Bases,
+		recordCacheTTL: recordCacheTTL,
 	}
 
 	return p, nil
@@ -88,7 +91,7 @@ func (p *Provider) databaseFromAirtableBase(sctx *sql.Context, client *airtable.
 	}
 
 	for _, ts := range airtables.Tables {
-		table := NewTable(base, ts, p)
+		table := NewTable(base, ts, p, p.recordCacheTTL)
 		db.AddTable(table.Name(), table)
 	}
 

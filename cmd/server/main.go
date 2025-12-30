@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/alvarowolfx/gamer-journal-wrapped/src/airtablesql"
 	sqle "github.com/dolthub/go-mysql-server"
@@ -27,7 +28,13 @@ func main() {
 	airtableAPIKey := os.Getenv("AIRTABLE_API_KEY")
 	client := airtable.NewClient(airtableAPIKey)
 
-	provider, err := airtablesql.NewProvider(client)
+	recordCacheTTL := os.Getenv("AIRTABLE_RECORD_CACHE_TTL")
+	recordCacheTTLDuration, err := time.ParseDuration(recordCacheTTL)
+	if err != nil {
+		log.Printf("failed to parse record cache ttl: %v \n", err)
+		recordCacheTTLDuration = 1 * time.Minute
+	}
+	provider, err := airtablesql.NewProvider(client, recordCacheTTLDuration)
 	if err != nil {
 		log.Fatalf("failed to init airtable sql provider: %v", err)
 	}

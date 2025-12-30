@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	cachedPages    = 100
-	recordCacheTTL = 10 * time.Second
+	cachedPages = 100
 )
 
 type table struct {
@@ -28,7 +27,7 @@ type table struct {
 
 var _ sql.Table = &table{}
 
-func NewTable(base *airtable.Base, ts *airtable.TableSchema, provider *Provider) sql.Table {
+func NewTable(base *airtable.Base, ts *airtable.TableSchema, provider *Provider, recordCacheTTL time.Duration) sql.Table {
 	schema := tableSchemaFromAirtable(ts)
 	cache := expirable.NewLRU[string, airtable.Records](cachedPages, nil, recordCacheTTL)
 	return &table{

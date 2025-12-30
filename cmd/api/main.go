@@ -44,10 +44,16 @@ func main() {
 
 	serperAPIKey = os.Getenv("SERPER_API_KEY")
 	airtableAPIKey := os.Getenv("AIRTABLE_API_KEY")
+	recordCacheTTL := os.Getenv("AIRTABLE_RECORD_CACHE_TTL")
+	recordCacheTTLDuration, err := time.ParseDuration(recordCacheTTL)
+	if err != nil {
+		log.Printf("failed to parse record cache ttl: %v \n", err)
+		recordCacheTTLDuration = 1 * time.Minute
+	}
 	imagegen.LoadFonts()
 
 	client := airtable.NewClient(airtableAPIKey)
-	provider, err := airtablesql.NewProvider(client)
+	provider, err := airtablesql.NewProvider(client, recordCacheTTLDuration)
 	if err != nil {
 		log.Fatalf("failed to init airtable sql provider: %v", err)
 	}
