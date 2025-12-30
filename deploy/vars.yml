@@ -1,0 +1,9 @@
+app_name: "gamer-wrapped"
+deploy_path: "/home/ubuntu/gamer-wrapped"
+build_dir: "build"
+
+# Environment Variables
+airtable_api_key: ""
+serper_api_key: ""
+airtable_record_cache_ttl: "1h"
+vite_api_url: ""

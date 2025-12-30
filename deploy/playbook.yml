@@ -1,0 +1,79 @@
+---
+- name: Deploy Gamer Journal Wrapped
+  hosts: homelab
+  vars_files:
+    - vars.yml
+  tasks:
+    # --- Local Build Tasks ---
+    - name: Build Frontend locally
+      delegate_to: localhost
+      shell: |
+        cd ../frontend
+        npm install
+        npm run build
+      args:
+        executable: /bin/bash
+      register: frontend_build
+
+    - name: Build Backend locally (Linux AMD64)
+      delegate_to: localhost
+      shell: |
+        cd ..
+        GOOS=linux GOARCH=amd64 go build -o {{ app_name }} ./cmd/api/main.go
+      args:
+        executable: /bin/bash
+      register: backend_build
+
+    - name: Prepare build directory and package locally
+      delegate_to: localhost
+      shell: |
+        cd ..
+        rm -rf {{ build_dir }}
+        mkdir -p {{ build_dir }}/frontend
+        mv {{ app_name }} {{ build_dir }}/{{app_name}}
+        cp -r fonts/ {{ build_dir }}/fonts
+        cp -r frontend/dist/* {{ build_dir }}/frontend/
+        tar -czf {{ app_name }}.tar.gz -C {{ build_dir }} .
+      args:
+        executable: /bin/bash
+
+    # --- Remote Deployment Tasks ---
+    - name: Create deployment directory on VM
+      file:
+        path: "{{ deploy_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Upload and extract bundle to VM
+      unarchive:
+        src: "../{{ app_name }}.tar.gz"
+        dest: "{{ deploy_path }}"
+        remote_src: no
+
+    - name: Set up .env file on VM
+      template:
+        src: env.j2
+        dest: "{{ deploy_path }}/.env"
+        mode: '0600'
+
+    - name: Copy systemd service file
+      template:
+        src: service.j2
+        dest: "/etc/systemd/system/{{ app_name }}.service"
+      become: yes
+      notify: Restart Service
+
+    - name: Enable and start service
+      systemd:
+        name: "{{ app_name }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      become: yes
+
+  handlers:
+    - name: Restart Service
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+      become: yes

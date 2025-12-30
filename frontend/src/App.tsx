@@ -1,25 +1,26 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-    Calendar,
-    Download,
-    Eye,
-    Gamepad2,
-    Image as ImageIcon,
-    Layers,
-    Loader2,
-    Monitor,
-    Share2,
-    Sparkles,
-    Trophy
+  Calendar,
+  Download,
+  Eye,
+  Gamepad2,
+  Image as ImageIcon,
+  Layers,
+  Loader2,
+  Monitor,
+  Share2,
+  Sparkles,
+  Trophy
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
-    Bar,
-    LabelList,
-    BarChart as ReBarChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis, YAxis
+  Bar,
+  LabelList,
+  BarChart as ReBarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis, YAxis,
+  type RenderableText
 } from 'recharts'
 import { getChartUrl, getStats, type MostPlayedByNumGames, type MostPlayedByPlaytime, type MostPlayedGame, type StatsResponse } from './api'
 import './index.css'
@@ -110,7 +111,7 @@ const StatChart = ({ title, icon, data, dataKey, color, year, isMonths, isStatus
                   fill="#ffffff" 
                   fontSize={14} 
                   fontWeight={700} 
-                  formatter={(v: any) => isStatus ? v : `${v}h`} 
+                  formatter={(v: RenderableText) => isStatus ? v : `${v}h`} 
                 />
               )}
             </Bar>

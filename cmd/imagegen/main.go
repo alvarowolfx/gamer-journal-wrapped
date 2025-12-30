@@ -104,14 +104,14 @@ func main() {
 
 func renderAndSaveNMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T, n int) {
 	for _, orientation := range []imagegen.Orientation{imagegen.Vertical, imagegen.Horizontal} {
-		imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), n, orientation).
+		imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), n, orientation, serperAPIKey).
 			SavePNG(fmt.Sprintf("%s/%s_%s.png", outFolder, orientation.String(), util.ToSnakecase(title)))
 	}
 }
 
 func renderAndSaveAllMostPlayedWrapped[T imagegen.BarChartItem](title string, data []T) {
 	for _, orientation := range []imagegen.Orientation{imagegen.Vertical, imagegen.Horizontal} {
-		imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), len(data), orientation).
+		imagegen.RenderMostPlayedWrapped(title, toBarChartItems(data), len(data), orientation, serperAPIKey).
 			SavePNG(fmt.Sprintf("%s/%s_%s.png", outFolder, orientation.String(), util.ToSnakecase(title)))
 	}
 }

@@ -80,12 +80,20 @@ func main() {
 	}
 
 	e := echo.New()
-	e.Use(middleware.Logger())
+	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
 	e.GET("/api/stats", handleGetStats)
 	e.GET("/api/charts/:type", handleGetChart)
+
+	// Serve static files from the frontend build
+	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+		Root:   "frontend/dist",
+		Index:  "index.html",
+		Browse: false,
+		HTML5:  true,
+	}))
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
@@ -223,7 +231,7 @@ func handleGetChart(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Invalid chart type")
 	}
 
-	drawing := imagegen.RenderMostPlayedWrapped(title, data, limit, orientation)
+	drawing := imagegen.RenderMostPlayedWrapped(title, data, limit, orientation, serperAPIKey)
 
 	c.Response().Header().Set(echo.HeaderContentType, "image/png")
 	return drawing.EncodePNG(c.Response().Writer)

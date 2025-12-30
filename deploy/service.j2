@@ -1,0 +1,13 @@
+[Unit]
+Description=Gamer Journal Wrapped Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ ansible_user }}
+WorkingDirectory={{ deploy_path }}
+ExecStart={{ deploy_path }}/{{ app_name }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
