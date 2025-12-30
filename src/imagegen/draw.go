@@ -3,6 +3,7 @@ package imagegen
 import (
 	"image"
 	"log"
+	"sync"
 
 	"io"
 
@@ -31,6 +32,12 @@ const (
 	Vertical   Orientation = iota
 )
 
+var (
+	// Lock to prevent concurrent rendering, which was
+	// causing some glitches on text rendering
+	lock = sync.Mutex{}
+)
+
 func (o Orientation) String() string {
 	switch o {
 	case Horizontal:
@@ -52,7 +59,7 @@ type BarChartItem interface {
 	GetTitle() string
 	GetMetric() int
 	RenderMetric() string
-	RenderIcon(height uint) image.Image
+	RenderIcon(height uint, serperAPIKey string) image.Image
 }
 
 type SaveableDrawing interface {
@@ -68,12 +75,14 @@ func (d *drawing) EncodePNG(w io.Writer) error {
 	return d.Context.EncodePNG(w)
 }
 
-func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientation Orientation) SaveableDrawing {
+func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientation Orientation, serperAPIKey string) SaveableDrawing {
 	width := W
 	height := H
 	if orientation != Vertical {
 		width, height = height, width
 	}
+	lock.Lock()
+	defer lock.Unlock()
 	dc := gg.NewContext(width, height)
 	dc.SetHexColor(BackgroundColor)
 	dc.DrawRectangle(0, 0, float64(width), float64(height))
@@ -126,7 +135,7 @@ func RenderMostPlayedWrapped(title string, data []BarChartItem, n int, orientati
 			break
 		}
 		fullbarSize := float64(width) - 4*margin
-		icon := d.RenderIcon(uint(barHeight*2) - 4)
+		icon := d.RenderIcon(uint(barHeight*2)-4, serperAPIKey)
 
 		if icon != nil {
 			fullbarSize = float64(width) - 6*margin

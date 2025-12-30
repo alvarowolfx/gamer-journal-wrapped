@@ -35,13 +35,13 @@ func (mp MostPlayedByPlaytime) RenderMetric() string {
 	return fmt.Sprintf("%dh", mp.GetMetric())
 }
 
-func (mp MostPlayedByPlaytime) RenderIcon(height uint) image.Image {
+func (mp MostPlayedByPlaytime) RenderIcon(height uint, serperAPIKey string) image.Image {
 	if mp.NoIcon {
 		return nil
 	}
-	icon, err := LoadIconForName(mp.Title, false, "")
+	icon, err := LoadIconForName(mp.Title, false, serperAPIKey)
 	if err != nil {
-		fmt.Println("failed to load icon for game: ", mp.Title)
+		fmt.Println("failed to load icon for game: ", mp.Title, err)
 		return nil
 	}
 	return AutoResizeImage(height, icon)
@@ -65,7 +65,7 @@ func (mp MostPlayedByNumGames) RenderMetric() string {
 	return fmt.Sprintf("%d", mp.Count)
 }
 
-func (mp MostPlayedByNumGames) RenderIcon(height uint) image.Image {
+func (mp MostPlayedByNumGames) RenderIcon(height uint, serperAPIKey string) image.Image {
 	return nil
 }
 
@@ -88,10 +88,10 @@ func (mpg MostPlayedGame) RenderMetric() string {
 	return fmt.Sprintf("%dh", mpg.GetMetric())
 }
 
-func (mpg MostPlayedGame) RenderIcon(height uint) image.Image {
-	icon, err := LoadIconForName(mpg.Title, true, "")
+func (mpg MostPlayedGame) RenderIcon(height uint, serperAPIKey string) image.Image {
+	icon, err := LoadIconForName(mpg.Title, true, serperAPIKey)
 	if err != nil {
-		fmt.Println("failed to load icon for game: ", mpg.Title)
+		fmt.Println("failed to load icon for game: ", mpg.Title, err)
 		return nil
 	}
 	return AutoResizeImage(height, icon)
